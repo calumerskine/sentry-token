@@ -87,3 +87,34 @@ Route::filter('auth.token', function($route, $request)
 		return $response;
 	}
 });
+
+Route::get('restaurants' [
+
+	'before' => 'auth.token',
+
+	function()
+	{
+		$restaurants = [];
+		for ($i = 0; $i < 10; $i++)
+		{
+			$restaurant['name'] = 'rest_'.$i;
+			$restaurant['location'] = 'loc_'.$i;
+			$restaurants[] = $restaurant;
+		}
+
+		return Response::json($restaurants, 200);
+	}
+]);
+
+Route::get('account', [
+
+	'before' => 'auth.token',
+
+	function()
+	{
+		$user = Sentry::getUser();
+		$token = $user->tokens()->where('client', BrowserDetect::toString())->first();
+
+		return Response::json(['user' => $user->toArray(), 'token' => $token->toArray()]);
+	}
+]);
