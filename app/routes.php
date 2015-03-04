@@ -15,3 +15,14 @@ Route::get('/', function()
 {
 	return View::make('hello');
 });
+
+Route::get('create', function()
+{
+	$user = Sentry::createUser([
+		'email'		=> 'calum@host.com',
+		'password'	=> 'password',
+		'activated' => 'true'
+	]);
+
+	return 'User Created';
+});
