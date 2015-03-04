@@ -11,10 +11,10 @@
 |
 */
 
-Route::get('/', function()
-{
-	return View::make('hello');
-});
+// Route::get('/', function()
+// {
+// 	return View::make('hello');
+// });
 
 Route::get('create', function()
 {
@@ -25,4 +25,65 @@ Route::get('create', function()
 	]);
 
 	return 'User Created';
+});
+
+Route::post('login', function()
+{
+	try
+	{
+		// get user
+		$user = Sentry::authenticate(Input::all(), false);
+
+		// create token
+		$token = hash('sha256', Str::random(10), false);
+
+		// assign token
+		$user->api_token = $token;
+
+		// create user
+		$user->save();
+
+		return Response::json([
+			'token'		=> $token,
+			'user' 		=> $user->toArray()
+		]);
+	}
+	catch(Exception $e)
+	{
+		App::abort(404, $e->getMessage());
+	}
+});
+
+Route::group(['prefix' => 'api', 'before' => 'auth.token'], function()
+{
+	Route::get('/', function()
+	{
+		return 'Protected Resource';
+	});
+});
+
+Route::filter('auth.token', function($route, $request)
+{
+	// get token from request
+	$payload = $request->header('X-Auth-Token');
+
+	// get user model
+	$userModel = Sentry::getUserProvider()->createModel();
+
+	// find the user with matching token
+	$user = $userModel->where('api_token', $payload)->first();
+
+	// if token or user aren't found, return 401
+	if (! $payload || ! $user)
+	{
+		$response = Response::json([
+			'error' 	=> true,
+			'message'	=> 'Not authenticated',
+			'code'		=> 401
+			], 401
+		);
+
+		$response->header('Content-Type', 'application/json');
+		return $response;
+	}
 });
