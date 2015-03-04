@@ -62,31 +62,31 @@ Route::group(['prefix' => 'api', 'before' => 'auth.token'], function()
 	});
 });
 
-Route::filter('auth.token', function($route, $request)
-{
-	// get token from request
-	$payload = $request->header('X-Auth-Token');
+// Route::filter('auth.token', function($route, $request)
+// {
+// 	// get token from request
+// 	$payload = $request->header('X-Auth-Token');
 
-	// get user model
-	$userModel = Sentry::getUserProvider()->createModel();
+// 	// get user model
+// 	$userModel = Sentry::getUserProvider()->createModel();
 
-	// find the user with matching token
-	$user = $userModel->where('api_token', $payload)->first();
+// 	// find the user with matching token
+// 	$user = $userModel->where('api_token', $payload)->first();
 
-	// if token or user aren't found, return 401
-	if (! $payload || ! $user)
-	{
-		$response = Response::json([
-			'error' 	=> true,
-			'message'	=> 'Not authenticated',
-			'code'		=> 401
-			], 401
-		);
+// 	// if token or user aren't found, return 401
+// 	if (! $payload || ! $user)
+// 	{
+// 		$response = Response::json([
+// 			'error' 	=> true,
+// 			'message'	=> 'Not authenticated',
+// 			'code'		=> 401
+// 			], 401
+// 		);
 
-		$response->header('Content-Type', 'application/json');
-		return $response;
-	}
-});
+// 		$response->header('Content-Type', 'application/json');
+// 		return $response;
+// 	}
+// });
 
 Route::get('restaurants', [
 
@@ -121,3 +121,106 @@ Route::get('account', [
 		]);
 	}
 ]);
+
+class Token extends Eloquent
+{
+	protected $table = 'tokens';
+	protected $fillable = ['api_token', 'client', 'user_id', 'expires_on'];
+
+	public function scopeValid()
+	{
+		return ! Carbon\Carbon::createFromTimeStamp(strtotime($this->expires_on))->isPast();
+	}
+
+	public function user()
+	{
+		return $this->belongsTo('User', 'user_id');
+	}
+}
+
+
+// // bare
+// Route::filter('auth.token', function($route, $request)
+// {
+// 	$authenticated = false;
+// 	if (! $authenticated)
+// 	{
+// 		$response = Response::json([
+// 			'error'		=> true,
+// 			'message'	=> 'Not authenticated',
+// 			'code'		=> 401
+// 			], 401
+// 		);
+
+// 		$response->header('Content-Type', 'application/json');
+// 		return $response;
+// 	}
+// });
+
+Route::filter('auth.token', function($route, $request)
+{
+	$authenticated = false;
+
+	// take username and password from request if they exist
+	if ($email = $request->getUser() && $password = $request->getPassword())
+	{
+		$credentials = [
+			'email' => $request->getUser(),
+			'password' => $request->getPassword()
+		];
+
+		// attempt to autenticate using those details
+		if (Auth::once($credentials))
+		{
+			$authenticated = true;
+
+			// if no token exists for this user, create one
+			if (! Auth::user()->tokens()->where('client', BrowserDetect::toString())->first())
+			{
+				$token = [];
+
+				$token['api_token'] = hash('sha256', Str::random(10), false);
+				$token['client'] = BrowserDetect::toString();
+				$token['expires_on'] = Carbon\Carbon::now()->addMonth()->toDateTimeString();
+
+				Auth::user()->tokens()->save(new Token($token));
+			}
+		}
+	}
+
+	// if an auth token is present, find the matching token and login the user
+	if ($payload = $request->header('X-Auth-Token'))
+	{
+		$userModel = Sentry::getUserProvider()->createModel();
+		$token = Token::valid()
+			->where('api_token', $payload)
+			->where('client', BrowserDetect::toString())
+			->first();
+
+		if ($token)
+		{
+			Sentry::login($token->user);
+			$authenticated = true;
+		}
+	}
+
+	// if the user is genuine but not logged in, log them in
+	if ($authenticated && ! Sentry::check())
+	{
+		Sentry::login(Auth::user());
+	}
+
+	// if user is not genuine, return 401
+	if (! $authenticated)
+	{
+		$response = Response::json([
+			'error'		=> true,
+			'message'	=> 'Not authenticated',
+			'code'		=> 401
+			], 401
+		);
+
+		$response->header('Content-Type', 'application/json');
+		return $response;
+	}
+});

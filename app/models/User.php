@@ -25,4 +25,8 @@ class User extends SentryUserModel implements UserInterface, RemindableInterface
 	 */
 	protected $hidden = array('password', 'remember_token');
 
+	public function tokens()
+	{
+		return $this->hasMany('Token');
+	}
 }
