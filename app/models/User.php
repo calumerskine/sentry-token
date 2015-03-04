@@ -5,7 +5,9 @@ use Illuminate\Auth\UserInterface;
 use Illuminate\Auth\Reminders\RemindableTrait;
 use Illuminate\Auth\Reminders\RemindableInterface;
 
-class User extends Eloquent implements UserInterface, RemindableInterface {
+use Cartalyst\Sentry\Users\Eloquent\User as SentryUserModel;
+
+class User extends SentryUserModel implements UserInterface, RemindableInterface {
 
 	use UserTrait, RemindableTrait;
 

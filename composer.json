@@ -5,7 +5,10 @@
 	"license": "MIT",
 	"require": {
 		"laravel/framework": "4.2.*",
-		"cartalyst/sentry": "2.1"
+		"cartalyst/sentry": "2.1",
+		"nesbot/Carbon": "*",
+		"hisorange/browser-detect": "1.*"
+
 	},
 	"autoload": {
 		"classmap": [
