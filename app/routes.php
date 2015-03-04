@@ -11,10 +11,10 @@
 |
 */
 
-// Route::get('/', function()
-// {
-// 	return View::make('hello');
-// });
+Route::get('/', function()
+{
+	return View::make('hello');
+});
 
 Route::get('create', function()
 {
@@ -56,7 +56,7 @@ Route::post('login', function()
 
 Route::group(['prefix' => 'api', 'before' => 'auth.token'], function()
 {
-	Route::get('/', function()
+	Route::get('/proc', function()
 	{
 		return 'Protected Resource';
 	});
