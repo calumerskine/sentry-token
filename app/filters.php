@@ -33,6 +33,26 @@ App::after(function($request, $response)
 |
 */
 
+Route::filter('serviceAuth', function() {
+	if (!Auth::check())
+	{
+		return Response::json([
+			'flash' => 'you should be connected to access this URL'
+			], 401
+		);
+	}
+});
+
+Route::filter('serviceCSRF', function() {
+	if (Session::token() != Request::header('csrf_token'))
+	{
+		return Response::json([
+			'message' => 'you silly hacker, you'
+			], 418
+		);
+	}
+});
+
 Route::filter('auth', function()
 {
 	if (Auth::guest())
